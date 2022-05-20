@@ -73,12 +73,37 @@ class PointLensModel:
         f1 = np.max(fluxes)
         return 1.2/f1
 
-    def fit(self, ts, fluxes):
-        g_f0 = PointLensModel.guess_f0(ts, fluxes)
-        g_t0 = PointLensModel.guess_t0(ts, fluxes)
-        g_td = PointLensModel.guess_td(ts, fluxes)
-        g_y = PointLensModel.guess_y(ts, fluxes)
-        ret = minimize(PointLensModel.model_L2, [g_f0, g_t0, g_td, g_y], (ts, fluxes))
+    def init_with_guesses(self, ts, fluxes):
+        self.f0 = PointLensModel.guess_f0(ts, fluxes)
+        self.t0 = PointLensModel.guess_t0(ts, fluxes)
+        self.td = PointLensModel.guess_td(ts, fluxes)
+        self.y = PointLensModel.guess_y(ts, fluxes)
+
+    def fit(self, ts, fluxes, cost = "L2"):
+        g_f0 = self.f0
+        g_t0 = self.t0
+        g_td = self.td
+        g_y = self.y
+        if cost=="L2":
+            cost_fn = PointLensModel.model_L2
+        else:
+            raise ValueError(f"Cost {cost} doesn't exist yet!")
+        ret = minimize(cost_fn, [g_f0, g_t0, g_td, g_y], (ts, fluxes))
+        if not ret.success:
+            print(ret.message)
+            return
+        self.f0, self.t0, self.td, self.y = ret.x
+
+    def fit_with_error(self, ts, fluxes, errors, cost = "L2"):
+        g_f0 = self.f0
+        g_t0 = self.t0
+        g_td = self.td
+        g_y = self.y
+        if cost=="L2":
+            cost_fn = PointLensModel.model_weighted_L2
+        else:
+            raise ValueError(f"Cost {cost} doesn't exist yet!")
+        ret = minimize(cost_fn, [g_f0, g_t0, g_td, g_y], (ts, fluxes, errors))
         if not ret.success:
             print(ret.message)
             return
